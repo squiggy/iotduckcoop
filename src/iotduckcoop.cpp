@@ -13,9 +13,6 @@ SYSTEM_MODE(AUTOMATIC);
 
 const int MOTIONSENSOR = D7;
 
-////// ------------------------- Open door / Close door ------------------------- //////
-
-bool switchMotorOff;
 
 ////// ------------------------- Door 1 / Outer Door ------------------------- //////
 
@@ -29,8 +26,9 @@ const int LASERDIODE_DOOR1 = A0;
 
 const int PHOTODIODE_DOOR1 = A2;
 
-const int SWITCH_STOP_OPENING_DOOR1 = D8;
-const int SWITCH_STOP_CLOSEING_DOOR1 = D15;
+const int SWITCH_STOP_OPENING_DOOR1 = D15;
+const int SWITCH_STOP_CLOSEING_DOOR1 = D8;
+bool switchStopOpeningDoor1;
 
 bool isOuterDoorOpen();
 void openOuterDoor();
@@ -48,8 +46,9 @@ const int LASERDIODE_DOOR2 = A1;
 const int PHOTODIODE_DOOR2 = A5;
 
 // TODO - wire swiches for Door 2
-const int SWITCH_STOP_OPENING_DOOR2 = 0;
-const int SWITCH_STOP_CLOSEING_DOOR2 = 0;
+const int SWITCH_STOP_OPENING_DOOR2 = D18;
+const int SWITCH_STOP_CLOSEING_DOOR2 = D17;
+bool switchStopOpeningDoor2;
 
 bool isInnerDoorOpen();
 void openInnerDoor();
@@ -60,7 +59,7 @@ const int microMode = 1; // microstep mode, default is 1/16 so 16; ex: 1/4 would
 // full rotation * microstep divider
 const int steps = 200 * microMode;
 
- ////// ------------------------- Timers ------------------------- //////
+////// ------------------------- Timers ------------------------- //////
 
 int checkDawnTimer; // 5 minutes
 
@@ -94,10 +93,10 @@ void setup() {
   pinMode(PHOTODIODE_DOOR1, INPUT);
   pinMode(PHOTODIODE_DOOR2, INPUT);
 
-  pinMode(SWITCH_STOP_CLOSEING_DOOR1, INPUT);
-  pinMode(SWITCH_STOP_CLOSEING_DOOR2, INPUT);
-  pinMode(SWITCH_STOP_OPENING_DOOR1, INPUT);
-  pinMode(SWITCH_STOP_OPENING_DOOR2, INPUT);
+  pinMode(SWITCH_STOP_CLOSEING_DOOR1, INPUT_PULLDOWN);
+  pinMode(SWITCH_STOP_CLOSEING_DOOR2, INPUT_PULLDOWN);
+  pinMode(SWITCH_STOP_OPENING_DOOR1, INPUT_PULLDOWN);
+  pinMode(SWITCH_STOP_OPENING_DOOR2, INPUT_PULLDOWN);
   // WiFi.setCredentials("DDCIOT","ddcIOT2020");
   // WiFi.setCredentials("S Rubio's iPhone","bobmarley");
 
@@ -118,7 +117,6 @@ void setup() {
 }
 
 void loop() {
-
  ////// ------------------------- Test Motors ------------------------- //////
 
   // // change direction every loop
@@ -156,12 +154,11 @@ void loop() {
   // let in duck.
   if (motionSensor > 30) {
     // Close outer door
-    closeOuterDoor();
+   // closeOuterDoor(); // DONE
     // Open inner door, to let ducks inside.
     openInnerDoor();
+    Serial.printf("Line 162: openInnerDoor()! \n");
   }
-
-  closeOuterDoor();
 
 ////// ------------------------- Daylight ------------------------- //////
 
@@ -169,14 +166,16 @@ void loop() {
   // photodiodeDaylight = analogRead(PHOTODIODE_DAYLIGHT);
   // Serial.printf("photodiodeDaylight %i \n", photodiodeDaylight);
 
-      if((millis() - checkDawnTimer) > 500) {
-        if (isDawn() && isOuterDoorOpen() == false && isInnerDoorOpen() == false) {
-          Serial.printf("checkDawnTimer %i", checkDawnTimer);
-          openInnerDoor();
+      // if((millis() - checkDawnTimer) > 500) {
+        // if (isDawn() && !isOuterDoorOpen() && !isInnerDoorOpen()) {
+        if (isDawn()) {
+          // Serial.printf("Line 174: checkDawnTimer %i \n", checkDawnTimer);
           openOuterDoor();
+          // openInnerDoor(); // Done
           // TODO - determine way to keep track of time for dawn and dusk, as this time changes through the year.
         }
-      }
+        // checkDawnTimer = millis();
+      // }
 
 ////// ------------------------- Outer door ------------------------- //////
 
@@ -192,34 +191,63 @@ void loop() {
   photodiodeDoor2 = analogRead(PHOTODIODE_DOOR2);
   if (photodiodeDoor2 > 50) {
     // Open door so duck doesn't get squished!
-        digitalWrite(STEP_DOOR2, LOW);
   }
   // Serial.printf(" %i \n", photodiodeDoor2);
 }
 
+////// ------------------------- OPEN doors ------------------------- //////
+
+// TODO - finish getting this working
 void openOuterDoor() {
+  int switchStopOpeningDoor1 = digitalRead(SWITCH_STOP_OPENING_DOOR1);
+  Serial.printf("switchStopOpeningDoor1 %d \n", switchStopOpeningDoor1);
 
-  int switchMotorOff = digitalRead(SWITCH_STOP_OPENING_DOOR1);
-  Serial.printf("switchMotorOff %d \n", switchMotorOff);
-  if (!switchMotorOff) {
-    digitalWrite(STEP_DOOR1, HIGH);
+  digitalWrite(DIR_DOOR1, HIGH);
+  if (!switchStopOpeningDoor1) {
+    for(int x = 0; x < steps; x++) {
+      digitalWrite(STEP_DOOR1, HIGH);
+      delay(2);
+      digitalWrite(STEP_DOOR1, LOW);
+      delay(2);
+    }
   }
-
 };
 
-void closeOuterDoor() {
-
-  int switchMotorOff = digitalRead(SWITCH_STOP_CLOSEING_DOOR1);
-
-  if (!switchMotorOff) {
-    digitalWrite(STEP_DOOR2, LOW);
-  }
-
-};
-
+// Done?
 void openInnerDoor() {
+  int switchStopOpeningDoor2 = digitalRead(SWITCH_STOP_OPENING_DOOR2);
+  Serial.printf("switchStopOpeningDoor2 %d \n", switchStopOpeningDoor2);
 
+  digitalWrite(DIR_DOOR2, LOW);
+  if (!switchStopOpeningDoor2) {
+    for(int x = 0; x < steps; x++) {
+      digitalWrite(STEP_DOOR2, HIGH);
+      delay(2);
+      digitalWrite(STEP_DOOR2, LOW);
+      delay(2);
+    }
+  }
 };
+
+////// ------------------------- CLOSE doors ------------------------- //////
+
+// Done?
+void closeOuterDoor() {
+  int switchStopClosingDoor1 = digitalRead(SWITCH_STOP_CLOSEING_DOOR1);
+  Serial.printf("switchStopClosingDoor1 %d \n", switchStopClosingDoor1);
+
+  digitalWrite(DIR_DOOR1, LOW);
+  if (!switchStopClosingDoor1) {
+    for(int x = 0; x < steps; x++) {
+      digitalWrite(STEP_DOOR1, HIGH);
+      delay(2);
+      digitalWrite(STEP_DOOR1, LOW);
+      delay(2);
+    }
+  }
+};
+
+// TODO - finish getting this working
 void closeInnerDoor() {
 
 };
@@ -232,7 +260,7 @@ bool isOuterDoorOpen() {
     
   // }
   // Test return value true for now. TODO - use halleffect sensor to check if door is open.
-  return true;
+  return false;
 };
 
 bool isInnerDoorOpen() {
@@ -240,5 +268,5 @@ bool isInnerDoorOpen() {
   // HALLEFFECT_DOOR2
 
     // Test return value true for now. TODO - use Halleffect sensor to check if door is open.
-    return true;
+    return false;
 };
