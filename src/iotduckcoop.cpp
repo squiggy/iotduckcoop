@@ -7,6 +7,7 @@
 // Include Particle Device OS APIs
 #include "Particle.h"
 #include "dawnDuskTimes.h"
+#include "iotduckcoopTests.h"
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
