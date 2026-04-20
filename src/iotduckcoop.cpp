@@ -102,16 +102,16 @@ void setup() {
   pinMode(LASERDIODE_DOOR2, OUTPUT);
 
   pinMode(PHOTODIODE_DOOR1, INPUT);
-  attachInterrupt(PHOTODIODE_DOOR2, stopDoor1, FALLING);
-  
+  // attachInterrupt(PHOTODIODE_DOOR2, stopDoor1, FALLING);
+
   pinMode(PHOTODIODE_DOOR2, INPUT);
-  attachInterrupt(PHOTODIODE_DOOR2, stopDoor2, FALLING);
+  // attachInterrupt(PHOTODIODE_DOOR2, stopDoor2, FALLING);
 
   pinMode(SWITCH_STOP_CLOSEING_DOOR1, INPUT_PULLDOWN);
-  attachInterrupt(SWITCH_STOP_CLOSEING_DOOR1, stopDoor1, RISING);
+  // attachInterrupt(SWITCH_STOP_CLOSEING_DOOR1, stopDoor1, RISING);
 
   pinMode(SWITCH_STOP_OPENING_DOOR1, INPUT_PULLDOWN);
-  attachInterrupt(SWITCH_STOP_OPENING_DOOR1, stopDoor1, RISING);
+  // attachInterrupt(SWITCH_STOP_OPENING_DOOR1, stopDoor1, RISING);
 
   pinMode(SWITCH_STOP_OPENING_DOOR2, INPUT_PULLDOWN);
   attachInterrupt(SWITCH_STOP_OPENING_DOOR2, stopDoor2, RISING);
@@ -180,39 +180,41 @@ void loop() {
 ////// ------------------------- Motion Sensor ------------------------- //////
 
   motionSensor = digitalRead(MOTIONSENSOR);
-  // Serial.printf("motionSensor %i \n", motionSensor);
+  Serial.printf("Line 183: motionSensor %i \n", motionSensor);
   // If there is motion in chamber, close outer door and open inner door to 
   // let in duck.
 
-  // It's daylight, open doors and let ducks out.
-  if (photodiodeDaylight >= 50) {
+  // Use photodiode to detect daylight.
+  photodiodeDaylight = analogRead(PHOTODIODE_DAYLIGHT);
+  // Serial.printf("Line 189: photodiodeDaylight %i \n", photodiodeDaylight);
 
+  // It's daylight, open doors and let ducks out.
+  if (photodiodeDaylight > 50) {
     openOuterDoor();
     openInnerDoor();
-
-    Serial.print("It's daylight. Just open doors. \n");
-
+    Serial.print("It's daylight. Open doors. \n");
   }
 
   // If it's dark, so let ducks inside coop if motion is detected, but don't let them out.
-  if (photodiodeDaylight <= 50) {
-    Serial.printf("Line 195: It's dark");
+  if (photodiodeDaylight < 50) {
+    Serial.printf("Line 195: It's dark \n");
     if (motionSensor == 1) {
-
+      Serial.printf("Motion was detected in chamber. Let duck in, but don't let any ducks out. \n");
+      // Serial.printf("Line 210: motionSensor %i \n", motionSensor);
       // close outer door
-      closeOuterDoor();
+      // closeOuterDoor();
       // and close inner door
       openInnerDoor();
-
-      Serial.printf("Motion was detected in chamber. Let duck in, but don't let any ducks out. \n");
     }
   }
-  
-  // If nothing is happning, set to default state of open outer door
+
+  // If nothing is happening, set to default state of open outer door
   // and closed inner door.
   if (motionSensor == 0) {
-    openOuterDoor();
+    // Serial.printf("Line 218: motionSensor %i\n", motionSensor);
+    // openOuterDoor();
     closeInnerDoor();
+    // Serial.printf("No motion was detected in chamber, so open outer door and closed inner door. Wait for duck to enter. \n");
   }
 
 ////// ------------------------- Daylight ------------------------- //////
@@ -221,10 +223,6 @@ void loop() {
   t = millis() / 5000.0;
   brightness = 127.5 * sin(2*M_PI*(1/5.0)*t)+127.5;
   analogWrite(LED_DAYLIGHT_TEST, brightness);
-
-  // Use photodiode to detect daylight.
-  photodiodeDaylight = analogRead(PHOTODIODE_DAYLIGHT);
-  // Serial.printf("photodiodeDaylight %i \n", photodiodeDaylight);
 
   // Open coors if  there is daylight
   if((millis() - checkDawnTimer) > 1000) {
